@@ -17,7 +17,7 @@ else
 fi
 chown build_user.build_user /tmp/build -R
 su build_user -c "makepkg --noconfirm -si $2"
-cp -fv ${pkgname}*pkg.tar.xz /var/apt/pacman/pkg/
+cp -fv ${pkgname}*pkg.tar.xz /var/cache/pacman/pkg/
 userdel build_user
 rm -f /etc/sudoers.d/build_user
 rm -rf /tmp/build
