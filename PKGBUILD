@@ -7,7 +7,7 @@ pkgdesc="Make archlinux to a single sfs file on aufs"
 arch=('any')
 url="http://www.51feel.info/"
 license=('GPL')
-depends=('grub' 'squashfs-tools' 'rsync' 'mkinitcpio' 'genisoimage' 'lzo' 'xz' 'gzip')
+depends=('grub' 'squashfs-tools' 'rsync' 'mkinitcpio' 'cdrtools' 'lzo' 'xz' 'gzip')
 optdepends=('xz: Use lzma or xz compression for the initramfs image'
             'pixz: Parallel, indexed xz compressor'
             'axel: Download accelerator'

@@ -465,97 +465,49 @@ gen_base()
         tar xvf $dl_dir/$bootstrap_file -C $build_dir/
     fi
 
-    echo "
-    useradd build_user
-    pacman -S --needed --noconfirm base-devel yajl
-    pacman -S --needed --noconfirm yajl customizepkg
-    mkdir -p /tmp/build
-    cd /tmp/build
-    wget -c http://aur.archlinux.org/packages/pa/package-query/package-query.tar.gz
-    tar zxvf package-query.tar.gz
-    chown build_user.build_user . -R
-    cd package-query
-    su build_user -c 'makepkg'
-    pacman -U --noconfirm package-query*.pkg.tar.xz
-    cd ..
-    wget -c http://aur.archlinux.org/packages/ya/yaourt/yaourt.tar.gz
-    tar zxvf yaourt.tar.gz
-    chown build_user.build_user . -R
-    cd yaourt
-    su build_user -c 'makepkg'
-    pacman -U --noconfirm yaourt*.pkg.tar.xz
-    cd ..
-    userdel build_user
-    rm -rf /tmp/build
-    " > $root_dir/root/install_yaourt
-
     echo '
-    useradd build_user
-    echo "%build_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/build_user
-    mkdir -p /tmp/build
-    cd /tmp/build
-    pkgbuild=$1
-    if [ "${pkgbuild:(-8)}" = 'PKGBUILD' ];then
-        wget $pkgbuild
-    else
-        yaourt -G aur/$1
-        cd $1
-    fi
-    chown build_user.build_user /tmp/build -R
-    su build_user -c "makepkg --noconfirm -si $2"
-    userdel build_user
-    rm -f /etc/sudoers.d/build_user
-    rm -rf /tmp/build
+        useradd build_user
+        echo "%build_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/build_user
+        mkdir -p /tmp/build
+        cd /tmp/build
+        pkgname=$1
+        if [ "${pkgname:(-8)}" = 'PKGBUILD' ];then
+            wget $pkgname
+        else
+            pacman -Qq $pkgname 2> /dev/null && exit
+            wget http://aur.archlinux.org/packages/${pkgname:0:2}/${pkgname}/PKGBUILD
+        fi
+        chown build_user.build_user /tmp/build -R
+        su build_user -c "makepkg --noconfirm -si $2"
+        userdel build_user
+        rm -f /etc/sudoers.d/build_user
+        rm -rf /tmp/build
     ' > $root_dir/root/install_aur
     chmod +x $root_dir/root/install_aur
 
     echo "
-    if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
-        pacman-key --init
-        pacman-key --populate archlinux
-    fi
-    pacman -Suy --noconfirm
-    pacman -S --needed --noconfirm vim openssh wget dosfstools 
-    pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
-    #yaourt
-    #pacman -S --noconfirm abs; abs;abs;abs
+        if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
+            pacman-key --init
+            pacman-key --populate archlinux
+        fi
+        pacman -Suy --noconfirm
+        pacman -S --needed --noconfirm vim openssh wget dosfstools base-devel
+        pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
+        #yaourt
+        #pacman -S --noconfirm abs; abs;abs;abs
+
+        /root/install_aur package-query
+        /root/install_aur yaourt
+        /root/install_aur linux-aufs_friendly --skippgpcheck
+        /root/install_aur mbr
+        /root/install_aur https://github.com/Zeroman/zm/raw/master/PKGBUILD
     " > $root_dir/root/init
     echo "Server = $src_url/archlinux/\$repo/os/\$arch" > $root_dir/etc/pacman.d/mirrorlist
     sed -i "s/^#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j$cpu_counts\"/g" $root_dir/etc/makepkg.conf
 
     chmod +x $root_dir/root/init
     $root_dir/bin/arch-chroot $root_dir /root/init
-
-    if [ ! -e $root_dir/sbin/yaourt ];then
-        chmod +x $root_dir/root/install_yaourt
-        $root_dir/bin/arch-chroot $root_dir /root/install_yaourt
-    fi
-
-    if [ ! -e $root_dir/boot/vmlinuz-linux-aufs_friendly ];then
-        $root_dir/bin/arch-chroot $root_dir /root/install_aur linux-aufs_friendly --skippgpcheck
-    fi
-
-    if [ ! -e $root_dir/sbin/install-mbr ];then
-        $root_dir/bin/arch-chroot $root_dir /root/install_aur mbr
-    fi
-
-    if [ ! -e $root_dir/usr/bin/zm ];then
-        mkdir -p $root_dir/root/zm
-        echo "
-        useradd build_user
-        mkdir -p /tmp/build
-        cd /tmp/build
-        wget https://github.com/Zeroman/zm/raw/master/PKGBUILD
-        chown build_user.build_user . -R
-        su build_user -c 'makepkg'
-        pacman -U --noconfirm zm*.pkg.tar.xz
-        userdel build_user
-        rm -rf /tmp/build
-        " > $root_dir/root/install_zm
-        chmod +x $root_dir/root/install_zm
-        $root_dir/bin/arch-chroot $root_dir /root/install_zm
-    fi
-
+    # pacman -S --needed --noconfirm yajl customizepkg
 }
 
 gen_basesystem()
