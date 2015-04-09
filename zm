@@ -1119,6 +1119,7 @@ install_pkg()
     fi
     mkdir -p $install_dir/usr/share/zm
     $CP $zm_dir/zm $install_dir/usr/share/zm
+    mkdir -p $install_dir/usr/bin/
     ln -sf /usr/share/zm/zm $install_dir/usr/bin/zm
 }
 
