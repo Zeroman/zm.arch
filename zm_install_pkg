@@ -11,10 +11,13 @@ if [ "${pkgname:(-8)}" = "PKGBUILD" ];then
     # pacman -Qq $pkgname > /dev/null 2>&1 && exit
 else
     pacman -Qq $pkgname > /dev/null 2>&1 && exit
-    wget http://aur.archlinux.org/packages/${pkgname:0:2}/${pkgname}/PKGBUILD
+    wget http://aur.archlinux.org/packages/${pkgname:0:2}/${pkgname}.tar.gz
+    tar xvf ${pkgname}.tar.gz
+    cd ${pkgname}
 fi
 chown build_user.build_user /tmp/build -R
 su build_user -c "makepkg --noconfirm -si $2"
+cp -fv ${pkgname}*pkg.tar.xz /var/apt/pacman/pkg/
 userdel build_user
 rm -f /etc/sudoers.d/build_user
 rm -rf /tmp/build

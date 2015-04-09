@@ -224,7 +224,7 @@ mount_device()
     if [ ! -e $build_dir/.mount_devs ];then
         touch $build_dir/.mount_devs
     fi
-    tmpfile=`mktemp`
+    tmpfile=$build_dir/.mount_devs.temp
     (echo "$last_param" | cat - $build_dir/.mount_devs > $tmpfile) && mv $tmpfile $build_dir/.mount_devs
 }
 
@@ -459,10 +459,14 @@ gen_base()
     download_file $src_url/archlinux/iso/latest/md5sums.txt $md5sum_file
     bootstrap_file=$(cat $md5sum_file | grep $zm_arch | awk '{print $2}')
     bootstrap_md5=$(cat $md5sum_file | grep $zm_arch | awk '{print $1}')
-    download_file $src_url/archlinux/iso/latest/$bootstrap_file $dl_dir/$bootstrap_file $bootstrap_md5
+    download_file $src_url/archlinux/iso/latest/$bootstrap_file /work/cache/pacman/pkg/$bootstrap_file $bootstrap_md5
     root_dir=$build_dir/root.$zm_arch
     if [ ! -d "$root_dir" ];then
-        tar xvf $dl_dir/$bootstrap_file -C $build_dir/
+        tar xvf /work/cache/pacman/pkg/$bootstrap_file -C $build_dir/
+    fi
+
+    if [ -d /work/cache/pacman/pkg ];then
+        mount_device --bind /work/cache/pacman/pkg $root_dir/var/cache/pacman/pkg
     fi
 
     echo "Server = $src_url/archlinux/\$repo/os/\$arch" > $root_dir/etc/pacman.d/mirrorlist
@@ -472,7 +476,18 @@ gen_base()
     cp -fv zm_install_init $root_dir/root/
     chmod +x zm_install_pkg $root_dir/root/zm_install_pkg
     chmod +x zm_install_pkg $root_dir/root/zm_install_init
-    $root_dir/bin/arch-chroot $root_dir /root/zm_install_init
+
+    cp -fv /etc/resolv.conf $root_dir/etc/resolv.conf
+    mount_device -t proc -o nosuid,noexec,nodev proc $root_dir/proc
+    mount_device -t sysfs -o nosuid,noexec,nodev,ro sys $root_dir/sys
+    mount_device -t devtmpfs -o mode=0755,nosuid udev $root_dir/dev
+    mount_device -t devpts -o mode=0620,gid=5,nosuid,noexec devpts $root_dir/dev/pts
+    mount_device -t tmpfs -o mode=1777,nosuid,nodev shm $root_dir/dev/shm
+    mount_device -t tmpfs -o nosuid,nodev,mode=0755 run $root_dir/run
+    mount_device -t tmpfs -o mode=1777,strictatime,nodev,nosuid tmp $root_dir/tmp
+
+    SHELL=/bin/sh unshare --fork --pid chroot $root_dir /root/zm_install_init
+
     rm -fv $root_dir/root/zm_install_init
     rm -fv $root_dir/root/zm_install_pkg
     # pacman -S --needed --noconfirm yajl customizepkg
@@ -1376,6 +1391,7 @@ zm_uninit()
                 echo "umount $dev"
                 umount_device $dev || true
             done
+            rm -rf $build_dir/.mount_devs
         fi
         check_mount $build_dir || true
         if $zm_debug;then
