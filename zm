@@ -491,6 +491,7 @@ gen_base()
 
     echo '
     useradd build_user
+    echo "%build_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/build_user
     mkdir -p /tmp/build
     cd /tmp/build
     pkgbuild=$1
@@ -501,9 +502,9 @@ gen_base()
         cd $1
     fi
     chown build_user.build_user /tmp/build -R
-    su build_user -c "makepkg $2"
-    pacman -U --noconfirm $1*.pkg.tar.xz
+    su build_user -c "makepkg --noconfirm -si $2"
     userdel build_user
+    rm -f /etc/sudoers.d/build_user
     rm -rf /tmp/build
     ' > $root_dir/root/install_aur
     chmod +x $root_dir/root/install_aur
@@ -1117,7 +1118,7 @@ install_pkg()
         install_dir=""
     fi
     mkdir -p $install_dir/usr/share/zm
-    $CP $zm_dir/{zm,common,mbak,user} $install_dir/usr/share/zm
+    $CP $zm_dir/{zm,mbak} $install_dir/usr/share/zm
     ln -sf /usr/share/zm/zm $install_dir/usr/bin/zm
 }
 
