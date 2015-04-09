@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-zm_path=$(realpath $0)
+zm_path=$(readlink -f $0)
 zm_dir=${zm_path%/*}
 SUDO=$(which sudo || true)
 
@@ -291,7 +291,7 @@ install_grub()
     grub_device=$1
     echo "[ $FUNCNAME ] grub -> $grub_device  "
 
-    grub_device=`realpath $grub_device`
+    grub_device=`readlink -f $grub_device`
     check_file_exist $grub_device
 
     select_continue now
@@ -446,7 +446,7 @@ gen_base_softs()
     zm_base_softs="$kernel_softs grub2 aptitude vim nfs-common udev procinfo 
     hdparm e2fsprogs usbutils lftp less lshw bc initramfs-tools ssh openssh-server
     module-init-tools dosfstools exfat-utils ntfs-3g busybox genisoimage mbr 
-    iproute realpath gpm rsync util-linux gpart debootstrap pciutils 
+    iproute gpm rsync util-linux gpart debootstrap pciutils 
     gzip squashfs-tools aufs-tools locales network-manager"
     # pigz lzip plzip xz-utils pxz p7zip-full
 }
@@ -487,20 +487,24 @@ gen_base()
     rm -rf /tmp/build
     " > $root_dir/root/install_yaourt
 
-    echo "
+    echo '
     useradd build_user
     mkdir -p /tmp/build
     cd /tmp/build
-    wget -c https://aur.archlinux.org/packages/li/linux-aufs_friendly/linux-aufs_friendly.tar.gz
-    tar zxvf linux-aufs_friendly.tar.gz
-    chown build_user.build_user . -R
-    cd linux-aufs_friendly
-    su build_user -c 'makepkg --skippgpcheck'
-    pacman -U --noconfirm package-query*.pkg.tar.xz
-    cd ..
+    pkgbuild=$1
+    if [ "${pkgbuild:(-8)}" = 'PKGBUILD' ];then
+        wget $pkgbuild
+    else
+        yaourt -G aur/$1
+        cd $1
+    fi
+    chown build_user.build_user /tmp/build -R
+    su build_user -c "makepkg $2"
+    pacman -U --noconfirm $1*.pkg.tar.xz
     userdel build_user
     rm -rf /tmp/build
-    " > $root_dir/root/install_aufs_kernel
+    ' > $root_dir/root/install_aur
+    chmod +x $root_dir/root/install_aur
 
     echo "
     if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
@@ -524,18 +528,25 @@ gen_base()
         $root_dir/bin/arch-chroot $root_dir /root/install_yaourt
     fi
 
+    if [ ! -e $root_dir/boot/vmlinuz-linux-aufs_friendly ];then
+        $root_dir/bin/arch-chroot $root_dir /root/install_aur linux-aufs_friendly --skippgpcheck
+    fi
+
+    if [ ! -e $root_dir/sbin/install-mbr ];then
+        $root_dir/bin/arch-chroot $root_dir /root/install_aur mbr
+    fi
+
     if [ ! -e $root_dir/usr/bin/zm ];then
         mkdir -p $root_dir/root/zm
         echo "
+        useradd build_user
         mkdir -p /tmp/build
         cd /tmp/build
         wget https://github.com/Zeroman/zm/raw/master/PKGBUILD
-        chgrp nobody /tmp/build
-        chmod g+ws /tmp/build
-        setfacl -m u::rwx,g::rwx /tmp/build
-        setfacl -d --set u::rwx,g::rwx,o::- /tmp/build
-        su nobody -c 'makepkg -si'
-        # pacman -U --noconfirm zm*.pkg.tar.xz
+        chown build_user.build_user . -R
+        su build_user -c 'makepkg'
+        pacman -U --noconfirm zm*.pkg.tar.xz
+        userdel build_user
         rm -rf /tmp/build
         " > $root_dir/root/install_zm
         chmod +x $root_dir/root/install_zm
@@ -612,7 +623,7 @@ gen_basesystem()
 gen_initrd()
 {
     defalut_install_dir $1
-    vmlinuz=$(realpath /vmlinuz)
+    vmlinuz=$(readlink -f /vmlinuz)
     kernel_ver=${vmlinuz#/boot/vmlinuz-}
     mkinitramfs -d initramfs -o $install_dir/${initrd_name} $kernel_ver
 }
@@ -663,7 +674,7 @@ update_system()
     print_env
     defalut_install_dir $1
 
-    vmlinuz=$(realpath /vmlinuz)
+    vmlinuz=$(readlink -f /vmlinuz)
     kernel_ver=${vmlinuz#/boot/vmlinuz-}
 
     # exec -a zm sh -c ""
@@ -1367,8 +1378,6 @@ zm_init()
     which plzip > /dev/null && LZ="plzip -n $cpu_counts"
     which pxz > /dev/null && XZ="pxz -T$cpu_counts"
 
-    which realpath > /dev/null 
-    which debootstrap > /dev/null
     which genisoimage > /dev/null
     which mksquashfs > /dev/null
     which install-mbr > /dev/null

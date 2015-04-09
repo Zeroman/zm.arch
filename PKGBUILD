@@ -7,7 +7,7 @@ pkgdesc="Make archlinux to a single sfs file on aufs"
 arch=('any')
 url="http://www.51feel.info/"
 license=('GPL')
-depends=('grub' 'squashfs-tools' 'rsync' 'mkinitcpio')
+depends=('grub' 'squashfs-tools' 'rsync' 'mkinitcpio' 'genisoimage' 'lzo' 'xz' 'gzip')
 optdepends=('xz: Use lzma or xz compression for the initramfs image'
             'pixz: Parallel, indexed xz compressor'
             'axel: Download accelerator'
@@ -19,6 +19,7 @@ optdepends=('xz: Use lzma or xz compression for the initramfs image'
 source=('git://github.com/Zeroman/zm.git')
 
 package() {
+    cd zm
     ./zm --install-pkg "${pkgdir}"
 }
 
