@@ -1295,6 +1295,8 @@ zm_excute()
                 ;;
             --update) zm_update; shift
                 ;;
+            --edit|-e) $EDITOR $zm_path; shift
+                ;;
             *) 
                 echo "$1"
                 type -t "$1" > /dev/null && { echo "run $1";$1; }; shift
