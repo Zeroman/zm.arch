@@ -545,9 +545,10 @@ gen_basesystem()
 gen_initrd()
 {
     defalut_install_dir $1
-    vmlinuz=$(readlink -f /vmlinuz)
-    kernel_ver=${vmlinuz#/boot/vmlinuz-}
-    mkinitramfs -d initramfs -o $install_dir/${initrd_name} $kernel_ver
+    vmlinuz=/boot/vmlinuz-linux-aufs_friendly
+    kernel_ver=echo $(pacman -Qi linux-aufs_friendly | awk -F: '/^Version/{print $2}')
+    $CP $vmlinuz $install_dir/$kernel_name
+    mkinitcpio -A sfsroot -S autodetect -k $kernel_ver -g $install_dir/${initrd_name} 
 }
 
 gen_root_sfs()
@@ -1045,8 +1046,14 @@ install_pkg()
     fi
 
     cp_mkdir $zm_dir/zm $install_dir/usr/bin/zm
+    cp_mkdir $zm_dir/zm_install_pkg $install_dir/usr/bin/zm_install_pkg
     cp_mkdir $zm_dir/hooks/sfsroot $install_dir/etc/initcpio/hooks/sfsroot
     cp_mkdir $zm_dir/install/sfsroot $install_dir/etc/initcpio/install/sfsroot
+}
+
+zm_update()
+{
+    zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
 }
 
 zm_setup_tzdata() 
@@ -1284,6 +1291,8 @@ zm_excute()
             --tar-aufssystem) shift; tar_aufsystem $1; test -z "$1" || shift
                 ;;
             --install-pkg) shift; install_pkg $1;  test -z "$1" || shift
+                ;;
+            --update) zm_update; shift
                 ;;
             *) 
                 echo "$1"
