@@ -508,7 +508,7 @@ gen_base()
         pacman-key --populate archlinux
     fi
     pacman -Suy --noconfirm
-    pacman -S --needed --noconfirm grub vim openssh rsync wget squashfs-tools dosfstools 
+    pacman -S --needed --noconfirm vim openssh wget dosfstools 
     pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
     #yaourt
     #pacman -S --noconfirm abs; abs;abs;abs
@@ -526,9 +526,17 @@ gen_base()
 
     if [ ! -e $root_dir/usr/bin/zm ];then
         mkdir -p $root_dir/root/zm
-        $CP zm PKGBUILD $root_dir/root/zm
         echo "
-        
+        mkdir -p /tmp/build
+        cd /tmp/build
+        wget https://github.com/Zeroman/zm/raw/master/PKGBUILD
+        chgrp nobody /tmp/build
+        chmod g+ws /tmp/build
+        setfacl -m u::rwx,g::rwx /tmp/build
+        setfacl -d --set u::rwx,g::rwx,o::- /tmp/build
+        su nobody -c 'makepkg -si'
+        # pacman -U --noconfirm zm*.pkg.tar.xz
+        rm -rf /tmp/build
         " > $root_dir/root/install_zm
         chmod +x $root_dir/root/install_zm
         $root_dir/bin/arch-chroot $root_dir /root/install_zm

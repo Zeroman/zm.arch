@@ -1,21 +1,22 @@
 # Maintainer: Zeroman Yang <51feel@gmail.com>
 
 pkgname=zm
-pkgver=.r5.g715a37b
-pkgrel=0.0.1
+pkgver=0.0.1
+pkgrel=1
 pkgdesc="Make archlinux to a single sfs file on aufs"
 arch=('any')
 url="http://www.51feel.info/"
 license=('GPL')
-depends=('grub2' 'squashfs-tools')
+depends=('grub' 'squashfs-tools' 'rsync' 'mkinitcpio')
 optdepends=('xz: Use lzma or xz compression for the initramfs image'
+            'pixz: Parallel, indexed xz compressor'
+            'axel: Download accelerator'
             'bzip2: Use bzip2 compression for the initramfs image'
-            'lzop: Use lzo compression for the initramfs image'
-            'mkinitcpio-nfs-utils: Support for root filesystem on NFS')
+            'lzop: Use lzo compression for the initramfs image')
 # provides=('mkinitcpio')
 # conflicts=('mkinitcpio')
 # backup=('etc/mkinitcpio.conf')
-# source=('git://projects.archlinux.org/mkinitcpio.git')
+source=('git://github.com/Zeroman/zm.git')
 
 package() {
     ./zm --install-pkg "${pkgdir}"
