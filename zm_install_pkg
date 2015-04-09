@@ -11,7 +11,7 @@ if [ "${pkgname:(-8)}" = "PKGBUILD" ];then
     # pacman -Qq $pkgname > /dev/null 2>&1 && exit
 else
     pacman -Qq $pkgname > /dev/null 2>&1 && exit
-    wget http://aur.archlinux.org/packages/${pkgname:0:2}/${pkgname}.tar.gz
+    wget http://aur.archlinux.org/packages/${pkgname:0:2}/${pkgname}/${pkgname}.tar.gz
     tar xvf ${pkgname}.tar.gz
     cd ${pkgname}
 fi
