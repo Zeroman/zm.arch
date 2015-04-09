@@ -1,0 +1,17 @@
+#!/bin/sh
+
+if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
+    pacman-key --init
+    pacman-key --populate archlinux
+fi
+pacman -Suy --noconfirm
+pacman -S --needed --noconfirm vim openssh wget dosfstools base-devel
+pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
+#yaourt
+#pacman -S --noconfirm abs; abs;abs;abs
+
+zm_install_pkg package-query
+zm_install_pkg yaourt
+zm_install_pkg linux-aufs_friendly --skippgpcheck
+zm_install_pkg mbr
+zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+useradd build_user
+echo "%build_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/build_user
+mkdir -p /tmp/build
+cd /tmp/build
+pkgname=$1
+if [ "${pkgname:(-8)}" = "PKGBUILD" ];then
+    wget $pkgname
+    pkgname=$(awk -F= '/pkgname=/{print $2}' PKGBUILD)
+    # pacman -Qq $pkgname > /dev/null 2>&1 && exit
+else
+    pacman -Qq $pkgname > /dev/null 2>&1 && exit
+    wget http://aur.archlinux.org/packages/${pkgname:0:2}/${pkgname}/PKGBUILD
+fi
+chown build_user.build_user /tmp/build -R
+su build_user -c "makepkg --noconfirm -si $2"
+userdel build_user
+rm -f /etc/sudoers.d/build_user
+rm -rf /tmp/build
+
