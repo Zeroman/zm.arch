@@ -1045,8 +1045,8 @@ install_pkg()
     fi
 
     cp_mkdir $zm_dir/zm $install_dir/usr/bin/zm
-    cp_mkdir $zm_dir/hooks/sfsroot $install_dir/etc/initcpio/hooks/
-    cp_mkdir $zm_dir/install/sfsroot $install_dir/etc/initcpio/install/
+    cp_mkdir $zm_dir/hooks/sfsroot $install_dir/etc/initcpio/hooks/sfsroot
+    cp_mkdir $zm_dir/install/sfsroot $install_dir/etc/initcpio/install/sfsroot
 }
 
 zm_setup_tzdata() 
