@@ -406,6 +406,8 @@ gen_iso_file()
     iso_label="sfs_iso"
     iso_filename=$1
 
+    which genisoimage > /dev/null
+
     install_grub_on_dir $iso_dir
     temp_path=/linux/$zm_arch/${zm_user}
     echo "
@@ -1378,7 +1380,6 @@ zm_init()
     which plzip > /dev/null && LZ="plzip -n $cpu_counts"
     which pxz > /dev/null && XZ="pxz -T$cpu_counts"
 
-    which genisoimage > /dev/null
     which mksquashfs > /dev/null
     which install-mbr > /dev/null
 
