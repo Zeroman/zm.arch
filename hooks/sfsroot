@@ -206,10 +206,10 @@ init_params()
     esac
 
     if [ -z "$root_sfs" ];then
-        root_sfs="linux/$zm_arch/$zm_user/root.sfs"
+        root_sfs=$(readlink -m "linux/$zm_arch/$zm_user/root.sfs")
     fi
     if [ -z "$home_sfs" ];then
-        home_sfs="linux/$zm_arch/$zm_user/home.sfs"
+        home_sfs=$(readlink -m "linux/$zm_arch/$zm_user/home.sfs")
     fi
 }
 
