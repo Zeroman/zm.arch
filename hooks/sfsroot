@@ -470,7 +470,7 @@ run_hook()
     move_sfs
     umask 0022
 
-    mount_handler='echo ":: go in "'
+    mount_handler='true'
 
     if $sfs_debug;then
         print_param_info
@@ -479,5 +479,4 @@ run_hook()
             launch_interactive_shell
         fi
     fi
-
 }
