@@ -58,7 +58,7 @@ debug_var()
 {
     var=$1
     eval value='$'$var
-    printf "\t %15s : %-s\n" $var $value
+    printf "  %-15s : %-s\n" $var $value
 }
 
 print_param_info()
@@ -78,7 +78,8 @@ print_param_info()
 err_exit()
 {
     print_param_info
-    err $*
+    echo "ERROR: $@"
+    launch_interactive_shell
 }
 
 get_fileSizeMB()
