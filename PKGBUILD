@@ -1,7 +1,7 @@
 # Maintainer: Zeroman Yang <51feel@gmail.com>
 
 pkgname=zm
-pkgver=0.0.1
+pkgver=0.0.2
 pkgrel=1
 pkgdesc="Make archlinux to a single sfs file on aufs"
 arch=('any')
