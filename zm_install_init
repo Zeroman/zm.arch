@@ -6,6 +6,7 @@ if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
 fi
 pacman -Suy --noconfirm
 pacman -S --needed --noconfirm vim openssh wget dosfstools base-devel
+pacman -S --needed --noconfirm procps-ng
 pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
 #yaourt
 #pacman -S --noconfirm abs; abs;abs;abs

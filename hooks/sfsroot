@@ -36,10 +36,12 @@ sfs_home_mpath=$sfs_mpath/home
 aufs_root_mpath=$aufs_mpath/aufs_root
 aufs_home_mpath=$aufs_mpath/aufs_home
 aufs_clean_file_name=.aufs.clean
+root_path=/new_root
 root_mpath=/
 home_mpath=/home
 work_mpath=/work
 backup_mpath=/media/backup
+
 
 aufs_file_suffix="tar.gz"
 aufs_max_branch=8
@@ -335,32 +337,32 @@ mount_root()
         if [ -e $aufs_root_file ];then
             decompress_file $aufs_root_file $aufs_root_mpath
         fi
-        mount -t aufs -o br:$aufs_root_mpath none /root/$root_mpath
+        mount -t aufs -o br:$aufs_root_mpath none $root_path/$root_mpath
         mkdir -p $sfs_root_mpath
         mount $root_file $sfs_root_mpath
-        mount -t aufs -o remount,udba=none,append:${sfs_root_mpath}=ro none /root/$root_mpath
+        mount -t aufs -o remount,udba=none,append:${sfs_root_mpath}=ro none $root_path/$root_mpath
         for branch in $(seq 1 $aufs_max_branch)
         do
             if [ -e ${root_file}.${branch} ];then
                 mkdir -p ${sfs_root_mpath}.${branch}
                 mount ${root_file}.${branch} ${sfs_root_mpath}.${branch}
-                mount -t aufs -o remount,udba=none,add:1:${sfs_root_mpath}.${branch}=ro+wh none /root/$root_mpath
+                mount -t aufs -o remount,udba=none,add:1:${sfs_root_mpath}.${branch}=ro+wh none $root_path/$root_mpath
                 continue
             fi
             break
         done
         if $aufs_show;then
-            mkdir -p /root/$aufs_root_mpath
-            mount -n -o move $aufs_root_mpath /root/$aufs_root_mpath
+            mkdir -p $root_path/$aufs_root_mpath
+            mount -n -o move $aufs_root_mpath $root_path/$aufs_root_mpath
         fi
         if $sfs_show;then
-            mkdir -p /root/$sfs_root_mpath
-            mount -n -o move $sfs_root_mpath /root/$sfs_root_mpath
+            mkdir -p $root_path/$sfs_root_mpath
+            mount -n -o move $sfs_root_mpath $root_path/$sfs_root_mpath
             for branch in $(seq 1 $aufs_max_branch)
             do
                 if [ -e ${root_file}.${branch} ];then
-                    mkdir -p /root/${sfs_root_mpath}.${branch}
-                    mount -n -o move ${sfs_root_mpath}.${branch} /root/${sfs_root_mpath}.${branch}
+                    mkdir -p $root_path/${sfs_root_mpath}.${branch}
+                    mount -n -o move ${sfs_root_mpath}.${branch} $root_path/${sfs_root_mpath}.${branch}
                     continue
                 fi
                 break
@@ -372,7 +374,7 @@ mount_root()
 
 mount_home()
 {
-    mkdir -p /root/$home_mpath
+    mkdir -p $root_path/$home_mpath
     if [ -e $home_file ];then
         mkdir -p -m 0755 $aufs_home_mpath
         if [ ! -b $aufs_part ];then
@@ -385,50 +387,50 @@ mount_home()
         if [ -e $aufs_home_file ];then
             decompress_file $aufs_home_file $aufs_home_mpath
         fi
-        mount -t aufs -o br:$aufs_home_mpath none /root/$home_mpath
+        mount -t aufs -o br:$aufs_home_mpath none $root_path/$home_mpath
         mkdir -p $sfs_home_mpath
         mount $home_file $sfs_home_mpath
-        mount -t aufs -o remount,udba=none,append:${sfs_home_mpath}=ro none /root/$home_mpath
+        mount -t aufs -o remount,udba=none,append:${sfs_home_mpath}=ro none $root_path/$home_mpath
         for branch in $(seq 1 $aufs_max_branch)
         do
             if [ -e ${home_file}.${branch} ];then
                 mkdir -p ${sfs_home_mpath}.${branch}
                 mount ${home_file}.${branch} ${sfs_home_mpath}.${branch}
-                mount -t aufs -o remount,udba=none,add:1:${sfs_home_mpath}.${branch}=ro+wh none /root/$home_mpath
+                mount -t aufs -o remount,udba=none,add:1:${sfs_home_mpath}.${branch}=ro+wh none $root_path/$home_mpath
                 continue
             fi
             break
         done
         if $aufs_show;then
-            mkdir -p /root/$aufs_home_mpath
-            mount -n -o move $aufs_home_mpath /root/$aufs_home_mpath
+            mkdir -p $root_path/$aufs_home_mpath
+            mount -n -o move $aufs_home_mpath $root_path/$aufs_home_mpath
         fi
         if $sfs_show;then
-            mkdir -p /root/$sfs_home_mpath
-            mount -n -o move $sfs_home_mpath /root/$sfs_home_mpath
+            mkdir -p $root_path/$sfs_home_mpath
+            mount -n -o move $sfs_home_mpath $root_path/$sfs_home_mpath
             for branch in $(seq 1 $aufs_max_branch)
             do
                 if [ -e ${home_file}.${branch} ];then
-                    mkdir -p /root/${sfs_home_mpath}.${branch}
-                    mount -n -o move ${sfs_home_mpath}.${branch} /root/${sfs_home_mpath}.${branch}
+                    mkdir -p $root_path/${sfs_home_mpath}.${branch}
+                    mount -n -o move ${sfs_home_mpath}.${branch} $root_path/${sfs_home_mpath}.${branch}
                     continue
                 fi
                 break
             done
         fi
     else
-        mount_partition $home_part /root/$home_mpath
+        mount_partition $home_part $root_path/$home_mpath
     fi
 }
 
 mount_work()
 {
-    mount_partition $work_part /root/$work_mpath
+    mount_partition $work_part $root_path/$work_mpath
 }
 
 mount_backup()
 {
-    mount_partition $backup_part /root/$backup_mpath
+    mount_partition $backup_part $root_path/$backup_mpath
 }
 
 mount_swap()
@@ -441,17 +443,17 @@ mount_swap()
 move_sfs()
 {
     if $sfs_in_mem;then
-        mkdir -p /root/$sfs_ram_mpath
-        mount -n -o move $sfs_ram_mpath /root/$sfs_ram_mpath
+        mkdir -p $root_path/$sfs_ram_mpath
+        mount -n -o move $sfs_ram_mpath $root_path/$sfs_ram_mpath
         umount $sfs_part_mpath
     else
-        mkdir -p /root/$sfs_part_mpath
-        mount -n -o move $sfs_part_mpath /root/$sfs_part_mpath
+        mkdir -p $root_path/$sfs_part_mpath
+        mount -n -o move $sfs_part_mpath $root_path/$sfs_part_mpath
     fi
 
     if [ -b $aufs_part ];then
-        mkdir -p /root/$aufs_mpath
-        mount -n -o move $aufs_mpath /root/$aufs_mpath
+        mkdir -p $root_path/$aufs_mpath
+        mount -n -o move $aufs_mpath $root_path/$aufs_mpath
     fi
 }
 

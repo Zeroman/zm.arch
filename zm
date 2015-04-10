@@ -474,6 +474,7 @@ gen_base()
 
     cp -fv zm_install_pkg $root_dir/root/
     cp -fv zm_install_init $root_dir/root/
+    cp -fv pacman.conf $root_dir/root/etc/pacman.conf
     chmod +x zm_install_pkg $root_dir/root/zm_install_pkg
     chmod +x zm_install_pkg $root_dir/root/zm_install_init
 

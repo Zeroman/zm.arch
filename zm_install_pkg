@@ -17,7 +17,11 @@ else
 fi
 chown build_user.build_user /tmp/build -R
 su build_user -c "makepkg --noconfirm -si $2"
-cp -fv ${pkgname}*pkg.tar.xz /var/cache/pacman/pkg/
+repo_dir=/var/cache/pacman/repo
+if [ -d $repo_dir ];then
+    cp -fv ${pkgname}*pkg.tar.[xg]z $repo_dir/
+    repo-add $repo_dir/custom.db.tar.gz $repo_dir/*.pkg.tar.[xg]z
+fi
 userdel build_user
 rm -f /etc/sudoers.d/build_user
 rm -rf /tmp/build
