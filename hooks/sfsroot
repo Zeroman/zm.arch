@@ -50,22 +50,29 @@ cpu_counts=$(cat /proc/cpuinfo | grep "processor" | wc -l)
 GZ=gzip
 LZ=lzip
 XZ=xz
-which pigz > /dev/null && GZ="pigz -p $cpu_counts"
-which plzip > /dev/null && LZ="plzip -n $cpu_counts"
-which pxz > /dev/null && XZ="pxz -T$cpu_counts"
+which pigz > /dev/null 2>&1 && GZ="pigz -p $cpu_counts"
+which plzip > /dev/null 2>&1 && LZ="plzip -n $cpu_counts"
+which pxz > /dev/null 2>&1 && XZ="pxz -T$cpu_counts"
+
+debug_var()
+{
+    var=$1
+    eval value='$'$var
+    printf "\t %15s : %-s\n" $var $value
+}
 
 print_param_info()
 {
-    msg sfs_part=$sfs_part
-    msg aufs_part=$aufs_part
-    msg home_part=$home_part
-    msg work_part=$work_part
-    msg backup_part=$backup_part
-    msg sfs_in_mem=$sfs_in_mem
-    msg root_mem_size=$root_mem_size
-    msg home_mem_size=$home_mem_size
-    msg root_sfs=$root_sfs
-    msg home_sfs=$home_sfs
+    debug_var sfs_part
+    debug_var aufs_part
+    debug_var home_part
+    debug_var work_part
+    debug_var backup_part
+    debug_var sfs_in_mem
+    debug_var root_mem_size
+    debug_var home_mem_size
+    debug_var root_sfs
+    debug_var home_sfs
 }
 
 err_exit()
