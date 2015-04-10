@@ -563,7 +563,7 @@ gen_initrd()
 {
     defalut_install_dir $1
     vmlinuz=/boot/vmlinuz-linux-aufs_friendly
-    kernel_ver=echo $(pacman -Qi linux-aufs_friendly | awk -F: '/^Version/{print $2}')
+    kernel_ver=$(echo $(pacman -Qi linux-aufs_friendly | awk -F: '/^Version/{print $2}'))
     $CP $vmlinuz $install_dir/$kernel_name
     mkinitcpio -A sfsroot -S autodetect -k $kernel_ver -g $install_dir/${initrd_name} 
 }
