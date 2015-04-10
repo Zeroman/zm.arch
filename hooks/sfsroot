@@ -77,14 +77,14 @@ print_param_info()
 
 err_exit()
 {
-    print_param_info
     echo "ERROR: $@"
+    print_param_info
     launch_interactive_shell
 }
 
 get_fileSizeMB()
 {
-    test -e $1 || err_exit "$1 is no exist!"
+    test -e "$1" || err_exit "$1 is no exist!"
     fileSizeB=`stat -c %s $1`
     fileSizeKB=`expr $fileSizeB / 1024`
     fileSizeMB=`expr $fileSizeKB / 1024`
@@ -139,7 +139,7 @@ mount_partition()
 {
     partiton=$1
     mount_point=$2
-    if [ -b $partiton ];then
+    if [ -b "$partiton" ];then
         mkdir -p $mount_point
         fsck_device $partiton $mount_point
         mount $partiton $mount_point
@@ -218,7 +218,7 @@ wait_sfspart()
     wait_time=$1
     test -z "$wait_time" && wait_time=5
     for i in `seq 1 $wait_time`;do
-        if [ -b $sfs_part ];then
+        if [ -b "$sfs_part" ];then
             return 0
         fi
         sleep 1
@@ -275,7 +275,7 @@ init_sfs()
     mkdir -p $sfs_part_mpath
     msg "Mounting $sfs_part on $sfs_part_mpath ..." > /dev/console
     mount_partition $sfs_part $sfs_part_mpath
-    mount | grep $sfs_part_mpath || err_exit "mount $sfs_part error"
+    mount | grep $sfs_part_mpath || err_exit "mount $sfs_part"
 
     mkdir -p $sfs_ram_mpath
 
@@ -284,13 +284,13 @@ init_sfs()
     aufs_root_file=$sfs_part_mpath/rootaufs.${aufs_file_suffix}
     aufs_home_file=$sfs_part_mpath/homeaufs.${aufs_file_suffix}
 
-    test -e $root_file || err_exit "Not found root sfs file!"
+    test -e "$root_file" || err_exit "not found root sfs file!"
 
     if $sfs_in_mem;then
         root_fileSizeMB=`get_fileSizeMB $root_file`
 
         ramsfsSizeMB=$root_fileSizeMB
-        if [ -e $home_file ];then
+        if [ -e "$home_file" ];then
             home_fileSizeMB=`get_fileSizeMB $home_file`
             ramsfsSizeMB=`expr $ramsfsSizeMB + $home_fileSizeMB`
         fi
@@ -306,7 +306,7 @@ init_sfs()
             rsync -rhP $root_file $sfs_ram_mpath > /dev/console
             root_file=$sfs_ram_mpath/$(basename $root_sfs)
 
-            if [ -e $home_file ];then
+            if [ -e "$home_file" ];then
                 rsync -rhP $home_file $sfs_ram_mpath > /dev/console
                 home_file=$sfs_ram_mpath/$(basename $home_sfs)
             fi
@@ -315,17 +315,17 @@ init_sfs()
         fi
     fi
 
-    if [ $(getFree_mem_sizeMB) -lt 4096 -a ! -b $aufs_part ];then
+    if [ $(getFree_mem_sizeMB) -lt 4096 -a ! -b "$aufs_part" ];then
         aufs_part=$sfs_part
     fi
 
-    if [ -b $aufs_part ];then
+    if [ -b "$aufs_part" ];then
         mkdir -p $aufs_mpath
         mount_partition $aufs_part $aufs_mpath
-        if [ -e ${aufs_root_mpath}/$aufs_clean_file_name ];then
+        if [ -e "${aufs_root_mpath}/$aufs_clean_file_name" ];then
             rm -rf $aufs_root_mpath
         fi
-        if [ -e ${aufs_home_mpath}/$aufs_clean_file_name ];then
+        if [ -e "${aufs_home_mpath}/$aufs_clean_file_name" ];then
             rm -rf $aufs_home_mpath
         fi
     fi
@@ -333,16 +333,16 @@ init_sfs()
 
 mount_root()
 {
-    if [ -e $root_file ];then
+    if [ -e "$root_file" ];then
         mkdir -p -m 0755 $aufs_root_mpath
-        if [ ! -b $aufs_part ];then
+        if [ ! -b "$aufs_part" ];then
             if [ -z $root_mem_size ];then
                 mount -t tmpfs -o mode=755 none $aufs_root_mpath
             else
                 mount -t tmpfs -o mode=755,size=$root_mem_size none $aufs_root_mpath
             fi
         fi
-        if [ -e $aufs_root_file ];then
+        if [ -e "$aufs_root_file" ];then
             decompress_file $aufs_root_file $aufs_root_mpath
         fi
         mount -t aufs -o br:$aufs_root_mpath none $root_path/$root_mpath
@@ -351,7 +351,7 @@ mount_root()
         mount -t aufs -o remount,udba=none,append:${sfs_root_mpath}=ro none $root_path/$root_mpath
         for branch in $(seq 1 $aufs_max_branch)
         do
-            if [ -e ${root_file}.${branch} ];then
+            if [ -e "${root_file}.${branch}" ];then
                 mkdir -p ${sfs_root_mpath}.${branch}
                 mount ${root_file}.${branch} ${sfs_root_mpath}.${branch}
                 mount -t aufs -o remount,udba=none,add:1:${sfs_root_mpath}.${branch}=ro+wh none $root_path/$root_mpath
@@ -368,7 +368,7 @@ mount_root()
             mount -n -o move $sfs_root_mpath $root_path/$sfs_root_mpath
             for branch in $(seq 1 $aufs_max_branch)
             do
-                if [ -e ${root_file}.${branch} ];then
+                if [ -e "${root_file}.${branch}" ];then
                     mkdir -p $root_path/${sfs_root_mpath}.${branch}
                     mount -n -o move ${sfs_root_mpath}.${branch} $root_path/${sfs_root_mpath}.${branch}
                     continue
@@ -383,16 +383,16 @@ mount_root()
 mount_home()
 {
     mkdir -p $root_path/$home_mpath
-    if [ -e $home_file ];then
+    if [ -e "$home_file" ];then
         mkdir -p -m 0755 $aufs_home_mpath
-        if [ ! -b $aufs_part ];then
+        if [ ! -b "$aufs_part" ];then
             if [ -z $home_mem_size ];then
                 mount -t tmpfs -o mode=755 none $aufs_home_mpath
             else
                 mount -t tmpfs -o mode=755,size=$home_mem_size none $aufs_home_mpath
             fi
         fi
-        if [ -e $aufs_home_file ];then
+        if [ -e "$aufs_home_file" ];then
             decompress_file $aufs_home_file $aufs_home_mpath
         fi
         mount -t aufs -o br:$aufs_home_mpath none $root_path/$home_mpath
@@ -401,7 +401,7 @@ mount_home()
         mount -t aufs -o remount,udba=none,append:${sfs_home_mpath}=ro none $root_path/$home_mpath
         for branch in $(seq 1 $aufs_max_branch)
         do
-            if [ -e ${home_file}.${branch} ];then
+            if [ -e "${home_file}.${branch}" ];then
                 mkdir -p ${sfs_home_mpath}.${branch}
                 mount ${home_file}.${branch} ${sfs_home_mpath}.${branch}
                 mount -t aufs -o remount,udba=none,add:1:${sfs_home_mpath}.${branch}=ro+wh none $root_path/$home_mpath
@@ -418,7 +418,7 @@ mount_home()
             mount -n -o move $sfs_home_mpath $root_path/$sfs_home_mpath
             for branch in $(seq 1 $aufs_max_branch)
             do
-                if [ -e ${home_file}.${branch} ];then
+                if [ -e "${home_file}.${branch}" ];then
                     mkdir -p $root_path/${sfs_home_mpath}.${branch}
                     mount -n -o move ${sfs_home_mpath}.${branch} $root_path/${sfs_home_mpath}.${branch}
                     continue
@@ -459,7 +459,7 @@ move_sfs()
         mount -n -o move $sfs_part_mpath $root_path/$sfs_part_mpath
     fi
 
-    if [ -b $aufs_part ];then
+    if [ -b "$aufs_part" ];then
         mkdir -p $root_path/$aufs_mpath
         mount -n -o move $aufs_mpath $root_path/$aufs_mpath
     fi
