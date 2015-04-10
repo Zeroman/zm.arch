@@ -20,7 +20,7 @@ aufs_clean_file_name=.aufs.clean
 
 err()
 {   
-    echo "Error: $*"
+    echo "Error: $@"
     exit 1
 }
 
@@ -34,7 +34,9 @@ backup_file()
 {
     bak_file=$1
     if [ -e "$bak_file" ];then
-        mv ${bak_file} ${bak_file}.old
+        bak_file_dir=$(dirname $bak_file)/old
+        mkdir -p $bak_file_dir
+        mv ${bak_file} ${bak_file_dir}
     fi
 }
 
@@ -218,7 +220,7 @@ check_mount()
 
 mount_device()
 {
-    $SUDO mount $*
+    $SUDO mount $@
     last_param=${!#}
 
     if [ ! -e $build_dir/.mount_devs ];then
@@ -453,8 +455,45 @@ gen_base_softs()
     # pigz lzip plzip xz-utils pxz p7zip-full
 }
 
-gen_base() 
+zm_chroot()
 {
+    chroot_dir=$1
+
+    cp -fv /etc/resolv.conf $chroot_dir/etc/resolv.conf
+    mount_device -t proc -o nosuid,noexec,nodev proc $chroot_dir/proc
+    mount_device -t sysfs -o nosuid,noexec,nodev,ro sys $chroot_dir/sys
+    mount_device -t devtmpfs -o mode=0755,nosuid udev $chroot_dir/dev
+    mount_device -t devpts -o mode=0620,gid=5,nosuid,noexec devpts $chroot_dir/dev/pts
+    mount_device -t tmpfs -o mode=1777,nosuid,nodev shm $chroot_dir/dev/shm
+    mount_device -t tmpfs -o nosuid,nodev,mode=0755 run $chroot_dir/run
+    if [ -d /work/cache/pacman/pkg ];then
+        mount_device --bind /work/cache/pacman/pkg $root_dir/var/cache/pacman/pkg
+    fi
+
+    SHELL=/bin/sh unshare --fork --pid chroot $@
+
+    chroot_process=$(lsof -t $chroot_dir) || true
+    if [ -n "$chroot_process" ];then
+        kill -9 $chroot_process
+    fi
+
+    if [ -d /work/cache/pacman/pkg ];then
+        umount_device /work/cache/pacman/pkg
+    fi
+    umount_device $chroot_dir/run
+    umount_device $chroot_dir/dev/shm
+    umount_device $chroot_dir/dev/pts
+    umount_device $chroot_dir/dev
+    umount_device $chroot_dir/sys
+    umount_device $chroot_dir/proc
+}
+
+gen_basesystem()
+{
+    need_root
+    defalut_install_dir "$1" "$sfs_part_mpath/linux/$zm_arch/base"
+    print_env
+
     md5sum_file=$dl_dir/md5sums.txt
     download_file $src_url/archlinux/iso/latest/md5sums.txt $md5sum_file
     bootstrap_file=$(cat $md5sum_file | grep $zm_arch | awk '{print $2}')
@@ -463,10 +502,6 @@ gen_base()
     root_dir=$build_dir/root.$zm_arch
     if [ ! -d "$root_dir" ];then
         tar xvf /work/cache/pacman/pkg/$bootstrap_file -C $build_dir/
-    fi
-
-    if [ -d /work/cache/pacman/pkg ];then
-        mount_device --bind /work/cache/pacman/pkg $root_dir/var/cache/pacman/pkg
     fi
 
     echo "Server = $src_url/archlinux/\$repo/os/\$arch" > $root_dir/etc/pacman.d/mirrorlist
@@ -478,85 +513,18 @@ gen_base()
     chmod +x zm_install_pkg $root_dir/root/zm_install_pkg
     chmod +x zm_install_pkg $root_dir/root/zm_install_init
 
-    cp -fv /etc/resolv.conf $root_dir/etc/resolv.conf
-    mount_device -t proc -o nosuid,noexec,nodev proc $root_dir/proc
-    mount_device -t sysfs -o nosuid,noexec,nodev,ro sys $root_dir/sys
-    mount_device -t devtmpfs -o mode=0755,nosuid udev $root_dir/dev
-    mount_device -t devpts -o mode=0620,gid=5,nosuid,noexec devpts $root_dir/dev/pts
-    mount_device -t tmpfs -o mode=1777,nosuid,nodev shm $root_dir/dev/shm
-    mount_device -t tmpfs -o nosuid,nodev,mode=0755 run $root_dir/run
-    mount_device -t tmpfs -o mode=1777,strictatime,nodev,nosuid tmp $root_dir/tmp
-
-    SHELL=/bin/sh unshare --fork --pid chroot $root_dir /root/zm_install_init
+    zm_chroot $root_dir /root/zm_install_init
 
     rm -fv $root_dir/root/zm_install_init
     rm -fv $root_dir/root/zm_install_pkg
-    # pacman -S --needed --noconfirm yajl customizepkg
-}
-
-gen_basesystem()
-{
-    need_root
-
-    defalut_install_dir "$1" "$sfs_part_mpath/linux/$zm_arch/base"
-
-    print_env
-
-    export DEBIAN_FRONTEND=noninteractive 
-    apt_tool="chroot $root_dir $APTGET -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew"
-
-    is_ram_root_dir="no"
-    if [ $(get_free_mem_size_m) -gt 4096 ];then
-        mount_device -t tmpfs -o mode=755 tmpfs $root_dir
-        is_ram_root_dir="yes"
-    fi
-
-    # ln -snf `pwd`/debian_archives/archives_$zm_arch /var/cache/apt/archives
-    mkdir -p $root_dir/var/cache/apt/archives
-    if [ -d /work/cache/archives ];then
-        mount_device --bind /work/cache/archives $root_dir/var/cache/apt/archives
-    else 
-        mount_device --bind /var/cache/apt/archives $root_dir/var/cache/apt/archives
-    fi
-
-    debootstrap --arch $zm_arch ${deb_ver} $root_dir $src_url/debian
-
-    if [ -e conf/hosts ];then
-        $CP conf/hosts $root_dir/etc/
-    fi
-
-    mount_device --bind /proc $root_dir/proc
-    mount_device --bind /sys $root_dir/sys
-    # mount_device --bind /dev $root_dir/dev
-
-    $apt_tool install $zm_base_softs || true
-
-    $zm_path --install $root_dir/tmp/ --username $zm_user
-    chroot $root_dir sh -c "/tmp/zm --install --username $zm_user"
-    chroot $root_dir sh -c "/tmp/zm --gen-initrd /tmp"
-    chroot $root_dir sh -c "echo root:root | chpasswd"
-
-    chroot_process=$(lsof -t $root_dir) || true
-    if [ -n "$chroot_process" ];then
-        kill -9 $chroot_process
-    fi
-
-    umount_device $root_dir/proc
-    umount_device $root_dir/sys
-    # umount_device $root_dir/dev
-
-    umount_device $root_dir/var/cache/apt/archives
 
     backup_file $install_dir/${kernel_name}
     backup_file $install_dir/${initrd_name}
-    backup_file $install_dir/${root_sfs_name}
-    /bin/cp -f $root_dir/vmlinuz $install_dir/${kernel_name} #no links
-    $CP $root_dir/tmp/initrd.img $install_dir/${initrd_name}
-    gen_root_sfs $root_dir $install_dir/${root_sfs_name}
+    backup_file $install_dir/${root_sfs_name}*
 
-    if [ "$is_ram_root_dir" = "yes" ];then
-        umount_device $root_dir
-    fi
+    /bin/cp -f $root_dir/boot/vmlinuz-linux-aufs_friendly $install_dir/${kernel_name} #no links
+    /bin/cp -f $root_dir/boot/initrd.img $install_dir/${initrd_name}
+    gen_root_sfs $root_dir $install_dir/${root_sfs_name}
 }
 
 gen_initrd()
@@ -586,6 +554,7 @@ gen_root_sfs()
         -e "usr/bin/vmmouse_detect" \
         -e "var/cache/hald/fdi-cache" \
         -e "var/cache/apt/archives/.*" \
+        -e "boot/.*" \
         -e "work/.*" \
         -e "home/.*/.*" 
     touch $1/$aufs_clean_file_name
@@ -709,7 +678,7 @@ compress_dir()
     src_dir=$2
     dst_file=$3
     shift 3
-    excludes=$*
+    excludes=$@
     case "$file_suffix" in
         tar.gz)
             tar Oc $excludes -C $src_dir . | $GZ -c > $dst_file
@@ -958,8 +927,8 @@ install_system()
 add_soft()
 {	
     zm_softs+=" "
-    zm_softs+="$*"
-    # for soft in $* 
+    zm_softs+="$@"
+    # for soft in $@ 
     # do
     # dpkg -s $soft > /dev/null 2>&1 || aptitude install $soft -y
     # done
@@ -1033,13 +1002,13 @@ zm_user_command()
     shift
     test -z "$cmd" && return
     if command -v $cmd > /dev/null 2>&1;then
-        $cmd $*
+        $cmd $@
     fi
 }
 
 zm_add_groups()
 {
-    groups="$*"
+    groups="$@"
     for g in $groups
     do
         if ( grep $g /etc/group > /dev/null; ) && ! ( groups $zm_user | grep $g > /dev/null; );then
@@ -1307,11 +1276,13 @@ zm_excute()
                 ;;
             --tar-aufssystem) shift; tar_aufsystem $1; test -z "$1" || shift
                 ;;
-            --install-pkg) shift; install_pkg $1;  test -z "$1" || shift
+            --install-pkg) shift; install_pkg $1; exit 0;
                 ;;
-            --update-pkg) zm_update; shift
+            --update-pkg) zm_update; exit 0;
                 ;;
-            --edit|-e) $EDITOR $zm_path; shift
+            --edit|-e) $EDITOR $zm_path; exit 0;
+                ;;
+            --chroot)  shift; zm_chroot $1; exit 0;
                 ;;
             *) 
                 echo "$1"
@@ -1412,7 +1383,7 @@ if [ $# -eq 0 -o "$1" = "--help" ];then
     exit 0
 fi
 
-zm_argv=$*
+zm_argv=$@
 zm_clean=true
 zm_debug=false
 

@@ -16,3 +16,6 @@ pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
 /root/zm_install_pkg linux-aufs_friendly --skippgpcheck
 /root/zm_install_pkg mbr
 /root/zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
+
+zm --gen-initrd /boot/
+echo root:root | chpasswd
