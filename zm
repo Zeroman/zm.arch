@@ -1332,9 +1332,9 @@ zm_init()
     LZ=lzip
     XZ=xz
 
-    which pigz > /dev/null && GZ="pigz -p $cpu_counts"
-    which plzip > /dev/null && LZ="plzip -n $cpu_counts"
-    which pxz > /dev/null && XZ="pxz -T$cpu_counts"
+    which pigz > /dev/null 2>&1 && GZ="pigz -p $cpu_counts"
+    which plzip > /dev/null 2>&1 && LZ="plzip -n $cpu_counts"
+    which pxz > /dev/null 2>&1 && XZ="pxz -T$cpu_counts"
 
     which mksquashfs > /dev/null
     which install-mbr > /dev/null
