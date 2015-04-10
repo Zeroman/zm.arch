@@ -470,11 +470,14 @@ run_hook()
     move_sfs
     umask 0022
 
+    mount_handler='echo ":: go in "'
+
     if $sfs_debug;then
         print_param_info
         read choice
         if [ "$choice" != "y" ];then
-            PS1='[zm:initramfs] ' /bin/sh -i </dev/console >/dev/console 2>&1
+            launch_interactive_shell
         fi
     fi
+
 }
