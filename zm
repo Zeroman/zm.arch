@@ -524,7 +524,7 @@ gen_basesystem()
     backup_file $install_dir/${root_sfs_name}*
 
     /bin/cp -fv $root_dir/boot/vmlinuz-linux-aufs_friendly $install_dir/${kernel_name} #no links
-    /bin/cp -fv $root_dir/boot/${initrd_name} $install_dir/${kernel_name} #no links
+    /bin/cp -fv $root_dir/boot/${initrd_name} $install_dir/${initrd_name} #no links
     gen_root_sfs $root_dir $install_dir/${root_sfs_name}
 }
 
