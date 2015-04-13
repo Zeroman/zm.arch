@@ -19,7 +19,9 @@ chown build_user.build_user /tmp/build -R
 su build_user -c "makepkg --noconfirm -si $2"
 repo_dir=/work/cache/pacman/repo
 if [ -d $repo_dir ];then
+    rm -fv $repo_dir/${pkgname}*pkg.tar.[xg]z
     cp -fv ${pkgname}*pkg.tar.[xg]z $repo_dir/
+    rm -fv $repo_dir/custom.db.tar.gz
     repo-add $repo_dir/custom.db.tar.gz $repo_dir/*.pkg.tar.[xg]z
 fi
 userdel build_user
