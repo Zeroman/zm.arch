@@ -839,7 +839,7 @@ create_virtual_disk()
 
     root_file=/tmp/zm_root.$disk_format
     work_file=/tmp/zm_work.$disk_format
-    root_size=5G
+    root_size=32G
     work_size=32G
     if [ ! -e "$root_file" ];then
         qemu-img create -f $disk_format "$root_file" "$root_size"
@@ -879,6 +879,10 @@ EOF
 
     qemu-nbd -d /dev/nbd0
     qemu-nbd -d /dev/nbd1
+
+    chmod 777 $root_file
+    chmod 777 $work_file
+    echo "kvm -m 2048 -hda $root_file -hdb $work_file"
 }
 
 install_system()
@@ -887,7 +891,7 @@ install_system()
 
     check_file_exist $root_sfs_file
 
-    if [ ${dst_dir:0:4} = '/dev' ];then
+    if [ "${dst_dir:0:4}" = '/dev' ];then
         if [ ! -b $dst ];then
             err "$dst_dir is not block file."
         fi

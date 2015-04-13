@@ -191,6 +191,7 @@ init_params()
                 ;;
             sfs_debug)
                 sfs_debug=true
+                set -x
                 ;;
         esac
     done
