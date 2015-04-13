@@ -233,7 +233,7 @@ mount_device()
 umount_device()
 {
     if [ -e $build_dir/.mount_devs ];then
-        $SUDO sh -c "cat /proc/mounts | grep $1 &&  umount $1 && sed -i \":^$1$:d\" $build_dir/.mount_devs || true"
+        $SUDO sh -c "cat /proc/mounts | grep $1 > /dev/null && umount $1 && sed -i \":^$1$:d\" $build_dir/.mount_devs || true"
     fi
 }
 
@@ -457,7 +457,7 @@ gen_base_softs()
 
 zm_chroot()
 {
-    chroot_dir=$1
+    chroot_dir=$(readlink -f $1)
 
     cp -fv /etc/resolv.conf $chroot_dir/etc/resolv.conf
     mount_device -t proc -o nosuid,noexec,nodev proc $chroot_dir/proc
@@ -466,19 +466,20 @@ zm_chroot()
     mount_device -t devpts -o mode=0620,gid=5,nosuid,noexec devpts $chroot_dir/dev/pts
     mount_device -t tmpfs -o mode=1777,nosuid,nodev shm $chroot_dir/dev/shm
     mount_device -t tmpfs -o nosuid,nodev,mode=0755 run $chroot_dir/run
-    if [ -d /work/cache/pacman/pkg ];then
-        mount_device --bind /work/cache/pacman/pkg $root_dir/var/cache/pacman/pkg
+    if [ -d /work/cache/pacman/ ];then
+        mkdir -p $chroot_dir/work/cache/pacman
+        mount_device --bind /work/cache/pacman $chroot_dir/work/cache/pacman
     fi
 
     SHELL=/bin/sh unshare --fork --pid chroot $@
 
-    chroot_process=$(lsof -t $chroot_dir) || true
-    if [ -n "$chroot_process" ];then
-        kill -9 $chroot_process
-    fi
+    #chroot_process=$(lsof -t $chroot_dir) || true
+    #if [ -n "$chroot_process" ];then
+    #    kill -9 $chroot_process
+    #fi
 
-    if [ -d /work/cache/pacman/pkg ];then
-        umount_device /work/cache/pacman/pkg
+    if [ -d /work/cache/pacman ];then
+        umount_device $chroot_dir/work/cache/pacman
     fi
     umount_device $chroot_dir/run
     umount_device $chroot_dir/dev/shm
@@ -491,7 +492,7 @@ zm_chroot()
 gen_basesystem()
 {
     need_root
-    defalut_install_dir "$1" "$sfs_part_mpath/linux/$zm_arch/base"
+    defalut_install_dir "$1" "$sfs_part_mpath/linux/$zm_arch/$zm_user"
     print_env
 
     md5sum_file=$dl_dir/md5sums.txt
@@ -509,7 +510,7 @@ gen_basesystem()
 
     cp -fv zm_install_pkg $root_dir/root/
     cp -fv zm_install_init $root_dir/root/
-    cp -fv pacman.conf $root_dir/root/etc/pacman.conf
+    cp -fv pacman.conf $root_dir/etc/pacman.conf
     chmod +x zm_install_pkg $root_dir/root/zm_install_pkg
     chmod +x zm_install_pkg $root_dir/root/zm_install_init
 
@@ -522,18 +523,17 @@ gen_basesystem()
     backup_file $install_dir/${initrd_name}
     backup_file $install_dir/${root_sfs_name}*
 
-    /bin/cp -f $root_dir/boot/vmlinuz-linux-aufs_friendly $install_dir/${kernel_name} #no links
-    /bin/cp -f $root_dir/boot/initrd.img $install_dir/${initrd_name}
+    /bin/cp -fv $root_dir/boot/vmlinuz-linux-aufs_friendly $install_dir/${kernel_name} #no links
+    /bin/cp -fv $root_dir/boot/${initrd_name} $install_dir/${kernel_name} #no links
     gen_root_sfs $root_dir $install_dir/${root_sfs_name}
 }
 
 gen_initrd()
 {
-    defalut_install_dir $1
-    vmlinuz=/boot/vmlinuz-linux-aufs_friendly
-    kernel_ver=$(file $vmlinuz | awk '{print $9}')
-    $CP $vmlinuz $install_dir/$kernel_name
-    mkinitcpio -A sfsroot -S autodetect -k $kernel_ver -g $install_dir/${initrd_name} 
+    defalut_install_dir "$1"
+    vmlinuz="/boot/vmlinuz-linux-aufs_friendly"
+    kernel_ver=$(file "$vmlinuz" | awk '{print $9}')
+    mkinitcpio -A sfsroot -S autodetect -k "$kernel_ver" -g ${install_dir}/${initrd_name} 
 }
 
 gen_root_sfs()
@@ -832,17 +832,20 @@ gen_usb_system()
     install_system $usb_root_device 
 }
 
-create_qcow2_system()
+create_virtual_disk()
 {
-    root_file=/tmp/zm_root.qcow2
-    work_file=/tmp/zm_work.qcow2
+    # disk_format=qcow2
+    disk_format=vdi
+
+    root_file=/tmp/zm_root.$disk_format
+    work_file=/tmp/zm_work.$disk_format
     root_size=5G
     work_size=32G
     if [ ! -e "$root_file" ];then
-        qemu-img create -f qcow2 "$root_file" "$root_size"
+        qemu-img create -f $disk_format "$root_file" "$root_size"
     fi
     if [ ! -e "$work_file" ];then
-        qemu-img create -f qcow2 "$work_file" "$work_size"
+        qemu-img create -f $disk_format "$work_file" "$work_size"
     fi
     qemu-nbd -d /dev/nbd0 || true
     qemu-nbd -d /dev/nbd1 || true

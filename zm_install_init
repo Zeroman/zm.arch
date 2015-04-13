@@ -1,5 +1,20 @@
 #!/bin/sh
 
+
+install_pkg()
+{
+    if pacman -Ssq "^$1$" > /dev/null;then
+        pacman -S --needed --noconfirm $1
+        return
+    fi
+
+    if [ -z "$2" ];then
+        /root/zm_install_pkg $1
+    else
+        /root/zm_install_pkg $2
+    fi
+}
+
 if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
     pacman-key --init
     pacman-key --populate archlinux
@@ -11,11 +26,11 @@ pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
 #yaourt
 #pacman -S --noconfirm abs; abs;abs;abs
 
-/root/zm_install_pkg package-query
-/root/zm_install_pkg yaourt
-/root/zm_install_pkg linux-aufs_friendly --skippgpcheck
-/root/zm_install_pkg mbr
-/root/zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
+install_pkg package-query
+install_pkg yaourt
+install_pkg mbr
+install_pkg linux-aufs_friendly --skippgpcheck
+install_pkg zm http://github.com/Zeroman/zm/raw/master/PKGBUILD
 
-zm --gen-initrd /boot/
+zm --gen-initrd /boot 
 echo root:root | chpasswd
