@@ -469,6 +469,8 @@ move_sfs()
 run_hook()
 {
     umask 0077
+    modprobe aufs
+
     init_params
     init_sfs
     mount_root

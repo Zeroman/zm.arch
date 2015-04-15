@@ -7,12 +7,7 @@ install_pkg()
         pacman -S --needed --noconfirm $1
         return
     fi
-
-    if [ -z "$2" ];then
-        /root/zm_install_pkg $1
-    else
-        /root/zm_install_pkg $2
-    fi
+    /root/zm_install_pkg $@
 }
 
 if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
@@ -26,13 +21,24 @@ pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
 #yaourt
 #pacman -S --noconfirm abs; abs;abs;abs
 
+repo_dir=/work/cache/pacman/repo
+if [ -d $repo_dir ];then
+    if [ -e $repo_dir/custom.db ];then
+        rm -fv $repo_dir/custom.db.tar.gz
+        repo-add $repo_dir/custom.db.tar.gz $repo_dir/*.pkg.tar.[xg]z
+    else
+        touch $repo_dir/custom.db
+    fi
+fi
+
 install_pkg package-query
 install_pkg yaourt
 install_pkg mbr
 install_pkg linux-aufs_friendly --skippgpcheck
 install_pkg aufs3
 install_pkg aufs3-util
-install_pkg zm http://github.com/Zeroman/zm/raw/master/PKGBUILD
+
+/root/zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
 
 zm --gen-initrd /boot 
 echo root:root | chpasswd

@@ -226,6 +226,12 @@ mount_device()
     if [ ! -e $build_dir/.mount_devs ];then
         touch $build_dir/.mount_devs
     fi
+
+    if grep "$last_param" $build_dir/.mount_devs > /dev/null;then
+        echo "$last_param have mounted."
+        return
+    fi
+
     tmpfile=$build_dir/.mount_devs.temp
     (echo "$last_param" | cat - $build_dir/.mount_devs > $tmpfile) && mv $tmpfile $build_dir/.mount_devs
 }
@@ -473,10 +479,10 @@ zm_chroot()
 
     SHELL=/bin/sh unshare --fork --pid chroot $@
 
-    #chroot_process=$(lsof -t $chroot_dir) || true
-    #if [ -n "$chroot_process" ];then
-    #    kill -9 $chroot_process
-    #fi
+    chroot_process=$(lsof -t $chroot_dir) || true
+    if [ -n "$chroot_process" ];then
+       kill -9 $chroot_process
+    fi
 
     if [ -d /work/cache/pacman ];then
         umount_device $chroot_dir/work/cache/pacman
