@@ -12,7 +12,7 @@ label_suffix=""
 root_sfs=""
 home_sfs=""
 sfs_in_mem=false
-sfs_debug=false
+zm_debug=false
 sfs_show=false
 aufs_show=true
 root_mem_size=""
@@ -189,8 +189,8 @@ init_params()
             sfs_in_mem)
                 sfs_in_mem=true
                 ;;
-            sfs_debug)
-                sfs_debug=true
+            zm_debug)
+                zm_debug=true
                 set -x
                 ;;
         esac
@@ -362,16 +362,16 @@ mount_root()
         done
         if $aufs_show;then
             mkdir -p $root_path/$aufs_root_mpath
-            mount -n -o move $aufs_root_mpath $root_path/$aufs_root_mpath
+            mount -n --move $aufs_root_mpath $root_path/$aufs_root_mpath
         fi
         if $sfs_show;then
             mkdir -p $root_path/$sfs_root_mpath
-            mount -n -o move $sfs_root_mpath $root_path/$sfs_root_mpath
+            mount -n --move $sfs_root_mpath $root_path/$sfs_root_mpath
             for branch in $(seq 1 $aufs_max_branch)
             do
                 if [ -e "${root_file}.${branch}" ];then
                     mkdir -p $root_path/${sfs_root_mpath}.${branch}
-                    mount -n -o move ${sfs_root_mpath}.${branch} $root_path/${sfs_root_mpath}.${branch}
+                    mount -n --move ${sfs_root_mpath}.${branch} $root_path/${sfs_root_mpath}.${branch}
                     continue
                 fi
                 break
@@ -412,16 +412,16 @@ mount_home()
         done
         if $aufs_show;then
             mkdir -p $root_path/$aufs_home_mpath
-            mount -n -o move $aufs_home_mpath $root_path/$aufs_home_mpath
+            mount -n --move $aufs_home_mpath $root_path/$aufs_home_mpath
         fi
         if $sfs_show;then
             mkdir -p $root_path/$sfs_home_mpath
-            mount -n -o move $sfs_home_mpath $root_path/$sfs_home_mpath
+            mount -n --move $sfs_home_mpath $root_path/$sfs_home_mpath
             for branch in $(seq 1 $aufs_max_branch)
             do
                 if [ -e "${home_file}.${branch}" ];then
                     mkdir -p $root_path/${sfs_home_mpath}.${branch}
-                    mount -n -o move ${sfs_home_mpath}.${branch} $root_path/${sfs_home_mpath}.${branch}
+                    mount -n --move ${sfs_home_mpath}.${branch} $root_path/${sfs_home_mpath}.${branch}
                     continue
                 fi
                 break
@@ -453,16 +453,16 @@ move_sfs()
 {
     if $sfs_in_mem;then
         mkdir -p $root_path/$sfs_ram_mpath
-        mount -n -o move $sfs_ram_mpath $root_path/$sfs_ram_mpath
+        mount -n --move $sfs_ram_mpath $root_path/$sfs_ram_mpath
         umount $sfs_part_mpath
     else
         mkdir -p $root_path/$sfs_part_mpath
-        mount -n -o move $sfs_part_mpath $root_path/$sfs_part_mpath
+        mount -n --move $sfs_part_mpath $root_path/$sfs_part_mpath
     fi
 
     if [ -b "$aufs_part" ];then
         mkdir -p $root_path/$aufs_mpath
-        mount -n -o move $aufs_mpath $root_path/$aufs_mpath
+        mount -n --move $aufs_mpath $root_path/$aufs_mpath
     fi
 }
 
@@ -483,7 +483,7 @@ run_hook()
 
     mount_handler='true'
 
-    if $sfs_debug;then
+    if $zm_debug;then
         print_param_info
         read choice
         if [ "$choice" != "y" ];then

@@ -841,13 +841,13 @@ gen_usb_system()
 
 create_virtual_disk()
 {
-    # disk_format=qcow2
-    disk_format=vdi
+    disk_format=qcow2
+    # disk_format=vdi
 
     root_file=/tmp/zm_root.$disk_format
     work_file=/tmp/zm_work.$disk_format
     root_size=32G
-    work_size=32G
+    work_size=64G
     if [ ! -e "$root_file" ];then
         qemu-img create -f $disk_format "$root_file" "$root_size"
     fi

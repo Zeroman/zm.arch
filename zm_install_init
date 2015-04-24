@@ -15,6 +15,7 @@ if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
     pacman-key --populate archlinux
 fi
 pacman -Suy --noconfirm
+pacman -S --needed --noconfirm systemd-sysvcompat
 pacman -S --needed --noconfirm vim openssh wget dosfstools base-devel
 pacman -S --needed --noconfirm procps-ng
 pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
