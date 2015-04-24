@@ -4,7 +4,7 @@ build() {
     add_binary rsync
     add_binary which
     add_binary readlink
-    add_binary mount.aufs
+    add_module aufs
     add_runscript
 }
 

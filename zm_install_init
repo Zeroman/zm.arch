@@ -36,7 +36,7 @@ install_pkg yaourt
 install_pkg mbr
 install_pkg linux-aufs_friendly --skippgpcheck
 install_pkg aufs3
-install_pkg aufs3-util
+# install_pkg aufs3-util
 
 /root/zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
 

@@ -464,6 +464,7 @@ gen_base_softs()
 zm_chroot()
 {
     chroot_dir=$(readlink -f $1)
+    shift
 
     cp -fv /etc/resolv.conf $chroot_dir/etc/resolv.conf
     mount_device -t proc -o nosuid,noexec,nodev proc $chroot_dir/proc
@@ -477,7 +478,7 @@ zm_chroot()
         mount_device --bind /work/cache/pacman $chroot_dir/work/cache/pacman
     fi
 
-    SHELL=/bin/sh unshare --fork --pid chroot $@
+    SHELL=/bin/sh unshare --fork --pid chroot $chroot_dir $@
 
     chroot_process=$(lsof -t $chroot_dir) || true
     if [ -n "$chroot_process" ];then
@@ -1365,6 +1366,9 @@ zm_init()
 
 zm_uninit()
 {
+    if $zm_debug;then
+        set +x
+    fi
     trap - ERR INT TERM EXIT
     if [ -d $build_dir ];then
         if $zm_debug;then
