@@ -1,7 +1,10 @@
 #!/bin/bash
 
 build() {
+    add_binary dd
     add_binary df
+    add_binary mkswap
+    add_binary swapon
     add_binary free
     add_binary rsync
     add_binary which
