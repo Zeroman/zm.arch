@@ -15,6 +15,7 @@ sfs_in_mem=false
 zm_debug=false
 sfs_show=false
 aufs_show=true
+swap_size="4096"
 root_mem_size=""
 home_mem_size=""
 
@@ -82,18 +83,42 @@ err_exit()
     launch_interactive_shell
 }
 
-get_fileSizeMB()
+get_filesize_mb()
 {
-    test -e "$1" || err_exit "$1 is no exist!"
+    test -e $1 || err_exit "$1 is no exist!"
     fileSizeB=`stat -c %s $1`
     fileSizeKB=`expr $fileSizeB / 1024`
     fileSizeMB=`expr $fileSizeKB / 1024`
     echo $fileSizeMB
 }
 
-getFree_mem_sizeMB()
+get_mem_freesize_mb()
 {
     free -m | grep Mem | awk '{print $4}'
+}
+
+get_freesize_dir_mb()
+{
+    size_mb=$(df -mP $1 | sed -n '2p' | awk '{print $4}')
+    echo ${size_mb}
+}
+
+get_freesize_path()
+{
+    min_size=$1; shift
+    all_path=$@
+
+    free_path=""
+    for path in $all_path
+    do
+        if [ "$(get_freesize_dir_mb $path)" -gt $min_size ];then
+            free_path=/root/$sfs_part_mpath
+        fi
+        if [ -z "$free_path" ];then
+            break
+        fi
+    done
+    echo $free_path
 }
 
 decompress_file()
@@ -102,9 +127,9 @@ decompress_file()
     dst_dir=$2
     file_suffix=${src_file#*.}
 
-    res_mem_size=`getFree_mem_sizeMB`
+    res_mem_size=`get_mem_freesize_mb`
     res_mem_size=`expr $res_mem_size / 8`
-    fileSizeMB=`get_fileSizeMB $src_file`
+    fileSizeMB=`get_filesize_mb $src_file`
     if [ $res_mem_size -gt $fileSizeMB ];then
         rsync -rhP $src_file /tmp > /dev/console
         src_file=/tmp/$(basename $src_file)
@@ -288,16 +313,16 @@ init_sfs()
     test -e "$root_file" || err_exit "not found root sfs file!"
 
     if $sfs_in_mem;then
-        root_fileSizeMB=`get_fileSizeMB $root_file`
+        root_fileSizeMB=`get_filesize_mb $root_file`
 
         ramsfsSizeMB=$root_fileSizeMB
         if [ -e "$home_file" ];then
-            home_fileSizeMB=`get_fileSizeMB $home_file`
+            home_fileSizeMB=`get_filesize_mb $home_file`
             ramsfsSizeMB=`expr $ramsfsSizeMB + $home_fileSizeMB`
         fi
         ramsfsSizeMB=`expr $ramsfsSizeMB + 2`
 
-        res_mem_size=`getFree_mem_sizeMB`
+        res_mem_size=`get_mem_freesize_mb`
         res_mem_size=`expr $res_mem_size / 2`
 
         if [ $res_mem_size -gt $ramsfsSizeMB ];then
@@ -316,7 +341,7 @@ init_sfs()
         fi
     fi
 
-    if [ $(getFree_mem_sizeMB) -lt 4096 -a ! -b "$aufs_part" ];then
+    if [ $(get_mem_freesize_mb) -lt 4096 -a ! -b "$aufs_part" ];then
         aufs_part=$sfs_part
     fi
 
