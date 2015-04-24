@@ -481,10 +481,10 @@ mount_swap()
                     temp_size=$(get_filesize_mb $swap_path/swap.img)
                     temp_size=$(expr $temp_size + 512)
                     if [ "$temp_size" -lt "$swap_size" ];then 
-                        dd if=/dev/zero of=$swap_path/swap.img bs=1M count=0 seek=$swap_size
+                        dd if=/dev/zero of=$swap_path/swap.img bs=1M count=$swap_size
                     fi
                 else
-                    dd if=/dev/zero of=$swap_path/swap.img bs=1M count=0 seek=$swap_size
+                    dd if=/dev/zero of=$swap_path/swap.img bs=1M count=$swap_size
                 fi
                 chmod 600 $swap_path/swap.img
                 mkswap $swap_path/swap.img
