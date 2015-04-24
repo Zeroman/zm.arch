@@ -522,8 +522,8 @@ run_hook()
     mount_home
     mount_work
     mount_backup
-    mount_swap
     move_sfs
+    mount_swap
     umask 0022
 
     mount_handler='true'
