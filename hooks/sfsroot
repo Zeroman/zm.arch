@@ -112,7 +112,7 @@ get_freesize_path()
     for path in $all_path
     do
         if [ "$(get_freesize_dir_mb $path)" -gt $min_size ];then
-            free_path=/root/$sfs_part_mpath
+            free_path=$root_path/$sfs_part_mpath
         fi
         if [ -z "$free_path" ];then
             break
@@ -475,10 +475,10 @@ mount_swap()
         all_mem_size=$(free -g | grep Mem | awk '{print $2}')
         if [ "$all_mem_size" -lt 8 ];then
             temp_size=$(expr $swap_size + 512)
-            swap_path=$(get_freesize_path "$temp_size" /root/$sfs_part_mpath /root/$work_mpath /root/$backup_mpath)
+            swap_path=$(get_freesize_path "$temp_size" $root_path/$sfs_part_mpath $root_path/$work_mpath $root_path/$backup_mpath)
             if [ -n "$swap_path" ];then
                 if [ -e $swap_path/swap.img ];then
-                    temp_size=$(get_filesize_mb $$swap_path/swap.img)
+                    temp_size=$(get_filesize_mb $swap_path/swap.img)
                     temp_size=$(expr $temp_size + 512)
                     if [ "$temp_size" -lt "$swap_size" ];then 
                         dd if=/dev/zero of=$swap_path/swap.img bs=1M count=0 seek=$swap_size
