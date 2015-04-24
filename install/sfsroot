@@ -1,6 +1,8 @@
 #!/bin/bash
 
 build() {
+    add_binary df
+    add_binary free
     add_binary rsync
     add_binary which
     add_binary readlink
