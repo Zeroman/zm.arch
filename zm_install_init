@@ -19,6 +19,7 @@ pacman -S --needed --noconfirm systemd-sysvcompat
 pacman -S --needed --noconfirm vim openssh wget dosfstools base-devel
 pacman -S --needed --noconfirm procps-ng
 pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
+pacman -S --needed --noconfirm linux
 #yaourt
 #pacman -S --noconfirm abs; abs;abs;abs
 
@@ -35,8 +36,8 @@ fi
 install_pkg package-query
 install_pkg yaourt
 install_pkg mbr
-install_pkg linux-aufs_friendly --skippgpcheck
-install_pkg aufs3
+#install_pkg linux-aufs_friendly --skippgpcheck
+#install_pkg aufs3
 # install_pkg aufs3-util
 
 /root/zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
