@@ -145,6 +145,8 @@ usage ()
     add_help "--chroot chroot_options" "like chroot options."
     add_help "--install-softs" "install softs."
     add_help "-m, --make-system [output dir]" "make system"
+    add_help "--kernel-name" "kernel name"
+    add_help "--kernel-ver" "kernel ver"
       
     echo "Usage:  <options>"
     for pos in $(seq 0 $(expr $index - 1))
@@ -191,6 +193,8 @@ print_line()
 print_env()
 {
     print_line
+    debug_var kernel_name
+    debug_var kernel_ver
     debug_var deb_ver
     debug_var zm_arch
     debug_var kernel_params 
@@ -677,7 +681,6 @@ gen_root_sfs()
         -e "usr/bin/vmmouse_detect" \
         -e "var/cache/hald/fdi-cache" \
         -e "var/cache/apt/archives/.*" \
-        -e "boot/.*" \
         -e "work/.*" \
         -e "home/.*/.*" 
     touch $1/$aufs_clean_file_name
@@ -1295,7 +1298,9 @@ zm_config()
                 ;;
             --initrd) zm_argv_del $1;shift; initrd_name=$1; zm_argv_del $1;shift; 
                 ;;
-            --kernel) zm_argv_del $1;shift; kernel_name=$1; zm_argv_del $1;shift; 
+            --kernel-name) zm_argv_del $1;shift; kernel_name=$1; zm_argv_del $1;shift; 
+                ;;
+            --kernel-ver) zm_argv_del $1;shift; kernel_ver=$1; zm_argv_del $1;shift; 
                 ;;
             --zm-user) zm_argv_del $1;shift; zm_user=$1; zm_argv_del $1;shift;
                 ;;
@@ -1438,7 +1443,9 @@ zm_excute()
                 ;;
             --update-system|-u) shift; update_system $1; test -z "$1" || shift; 
                 ;;
-            --install|-i) shift; install_zm $1; test -z "$1" || shift
+            --install-pkg) shift; install_pkg $1; exit 0;
+                ;;
+            --update-pkg) zm_update; exit 0;
                 ;;
             --edit|-e) $EDITOR $zm_path; exit 0;
                 ;;
@@ -1446,6 +1453,7 @@ zm_excute()
                 ;;
             --build-deb) shift; zm_build_deb_dhmake $1; exit 0;
                 ;;
+
             --version)
                 show_version; exit 0;
                 ;;
@@ -1515,6 +1523,7 @@ zm_uninit()
 {
     if $zm_debug;then
         set +x
+        print_env
     fi
     trap - ERR INT TERM EXIT
     if [ -d "$build_dir" ];then
