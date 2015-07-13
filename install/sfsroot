@@ -9,7 +9,7 @@ build() {
     add_binary rsync
     add_binary which
     add_binary readlink
-    add_module aufs
+    add_module overlay
     add_runscript
 }
 
