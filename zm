@@ -594,6 +594,9 @@ zm_chroot()
        kill -9 $chroot_process
     fi
 
+    echo "Wait for kill process..."
+    sleep 3
+
     if [ -d /work/cache/pacman ];then
         umount_device $chroot_dir/work/cache/pacman
     fi
@@ -624,36 +627,55 @@ gen_basesystem()
     echo "Server = $src_url/archlinux/\$repo/os/\$arch" > $root_dir/etc/pacman.d/mirrorlist
     sed -i "s/^#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j$cpu_counts\"/g" $root_dir/etc/makepkg.conf
 
-    cp -fv zm_install_pkg $root_dir/root/
-    cp -fv zm_install_init $root_dir/root/
+    # cp -fv zm_install_pkg $root_dir/root/
+    # cp -fv zm_install_init $root_dir/root/
 
     sed -i -e '/^#\[custom\]/,/^#Server = file:/s/\#//g' \
         -e 's#Server = file.*$#Server = file:///work/cache/pacman/repo#g' \
         -e 's@^#CacheDir.*/var/cache/pacman/pkg.*$@CacheDir = /work/cache/pacman/pkg/@g' \
         $root_dir/etc/pacman.conf
 
-    chmod +x zm_install_pkg $root_dir/root/zm_install_pkg
-    chmod +x zm_install_pkg $root_dir/root/zm_install_init
+    # chmod +x zm_install_pkg $root_dir/root/zm_install_pkg
+    # chmod +x zm_install_pkg $root_dir/root/zm_install_init
 
-    zm_chroot $root_dir /root/zm_install_init
+    # zm_chroot $root_dir /root/zm_install_init
 
-    rm -fv $root_dir/root/zm_install_init
-    rm -fv $root_dir/root/zm_install_pkg
+    $zm_path --zm-user $zm_user --install $root_dir/
 
-    backup_file $install_dir/${kernel_name}
-    backup_file $install_dir/${initrd_name}
-    backup_file $install_dir/${root_sfs_name}*
+    mkdir -p $root_dir/media/install
+    mount_device --bind $install_dir $root_dir/media/install
+
+    echo "
+    if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
+        pacman-key --init
+        pacman-key --populate archlinux
+    fi
+    pacman -Suy --noconfirm
+    pacman -S --needed --noconfirm base-devel
+    " > $root_dir/tmp/init
+
+    zm_chroot $root_dir "sh /tmp/init"
+    zm_chroot $root_dir "zm --zm-user $zm_user --arch $zm_arch auto_install"
+
+    umount_device $root_dir/media/install
+
+    # rm -fv $root_dir/root/zm_install_init
+    # rm -fv $root_dir/root/zm_install_pkg
+
+    # backup_file $install_dir/${kernel_name}
+    # backup_file $install_dir/${initrd_name}
+    # backup_file $install_dir/${root_sfs_name}*
 
     # /bin/cp -fv $root_dir/boot/vmlinuz-linux-aufs_friendly $install_dir/${kernel_name} #no links
-    /bin/cp -fv $root_dir/boot/vmlinuz-linux $install_dir/${kernel_name} #no links
-    /bin/cp -fv $root_dir/boot/${initrd_name} $install_dir/${initrd_name} #no links
-    gen_root_sfs $root_dir $install_dir/${root_sfs_name}
+    # /bin/cp -fv $root_dir/boot/vmlinuz-linux $install_dir/${kernel_name} #no links
+    # /bin/cp -fv $root_dir/boot/${initrd_name} $install_dir/${initrd_name} #no links
+    # gen_root_sfs $root_dir $install_dir/${root_sfs_name}
 }
 
 gen_kernel()
 {
     defalut_install_dir $1
-    vmlinuz=$(readlink -f /vmlinuz)
+    vmlinuz=$(readlink -f /boot/vmlinuz-linux)
     backup_file $install_dir/${kernel_name}
     /bin/cp -fv $vmlinuz $install_dir/${kernel_name}
 }
@@ -662,7 +684,7 @@ gen_initrd()
 {
     defalut_install_dir "$1"
     # vmlinuz="/boot/vmlinuz-linux-aufs_friendly"
-    vmlinuz="/boot/vmlinuz-linux"
+    vmlinuz=$(readlink -f /boot/vmlinuz-linux)
     kernel_ver=$(file "$vmlinuz" | awk '{print $9}')
     mkinitcpio -A sfsroot -S autodetect -k "$kernel_ver" -g ${install_dir}/${initrd_name} 
 }
@@ -910,12 +932,12 @@ create_virtual_disk()
     # qemu-nbd --cache writethrough -c /dev/nbd0 $root_file
     install-mbr --force /dev/nbd0
     install-mbr --force /dev/nbd1
-    sfdisk --label dos /dev/nbd0 << EOF
-,,0x83,*
-EOF
-    sfdisk --label dos /dev/nbd1 << EOF
-,,0x83,*
-EOF
+
+    parted -s -a optimal /dev/nbd0 mklabel msdos
+    parted -s -a optimal /dev/nbd0 mkpart primary ext2 64s 100%
+    parted -s -a optimal /dev/nbd1 mklabel msdos
+    parted -s -a optimal /dev/nbd1 mkpart primary ext2 64s 100%
+
     while [ ! -e /dev/nbd0p1 ];do
         blockdev --rereadpt /dev/nbd0
         sleep 1
@@ -948,16 +970,43 @@ default_zm_setup()
 
 auto_install()
 {
-    # export DEBIAN_FRONTEND=Gnome
-    # export DEBIAN_FRONTEND=Noninteractive
+    if  [ ! -e /etc/pacman.d/gnupg/trustdb.gpg ];then
+        pacman-key --init
+        pacman-key --populate archlinux
+    fi
+    pacman -Suy --noconfirm
+    pacman -S --needed --noconfirm systemd-sysvcompat
+    pacman -S --needed --noconfirm vim openssh wget dosfstools base-devel
+    pacman -S --needed --noconfirm procps-ng
+    pacman -S --needed --noconfirm xmlto docbook-xsl inetutils bc git
+    pacman -S --needed --noconfirm linux
+    #yaourt
+    #pacman -S --noconfirm abs; abs;abs;abs
 
-    install_zm
-    install_softs
-    zm_user_command zm_setup
+    repo_dir=/work/cache/pacman/repo
+    if [ -d $repo_dir ];then
+        if [ -e $repo_dir/custom.db ];then
+            rm -fv $repo_dir/custom.db.tar.gz
+            repo-add $repo_dir/custom.db.tar.gz $repo_dir/*.pkg.tar.[xg]z
+        else
+            touch $repo_dir/custom.db
+        fi
+    fi
+
+    install_pkg package-query
+    install_pkg yaourt
+    install_pkg mbr
+    #install_pkg linux-aufs_friendly --skippgpcheck
+    #install_pkg aufs3
+    # install_pkg aufs3-util
+
+    zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
+
+    echo root:root | chpasswd
+
     gen_kernel /media/install
     gen_initrd /media/install
     gen_root_sfs / /media/install/${root_sfs_name}
-    # gen_home_sfs /home /media/install/${home_sfs_name}
 
     sync;sync;sync
 }
@@ -987,7 +1036,7 @@ make_system()
         fi
     fi
 
-    $zm_path --zm-user $zm_user --install $root_dir/tmp/ 
+    $zm_path --zm-user $zm_user --install $root_dir/
 
     mkdir -p $root_dir/media/install
     mount_device --bind $install_dir $root_dir/media/install
@@ -1031,8 +1080,6 @@ install_system()
         rsync -avP $home_sfs_file $temp_dir
         rsync -avP $home_sfs_file.[0-9] $temp_dir || true
     fi
-
-    $zm_path --install $root_dir/zm
 
     sync;sync;sync
 
@@ -1196,20 +1243,61 @@ cp_mkdir()
 
 install_pkg()
 {
+    if pacman -Ssq "^$1$" > /dev/null;then
+        pacman -S --needed --noconfirm $1
+        return
+    fi
+    zm_install_pkg $@
+}
+
+install_zm()
+{
     install_dir=$1
-    if [ -z $install_dir ];then
-        install_dir=""
+    if [ -z "$install_dir" ];then
+        install_dir="/"
     fi
 
     cp_mkdir $zm_dir/zm $install_dir/usr/bin/zm
-    cp_mkdir $zm_dir/zm_install_pkg $install_dir/usr/bin/zm_install_pkg
     cp_mkdir $zm_dir/hooks/sfsroot $install_dir/etc/initcpio/hooks/sfsroot
     cp_mkdir $zm_dir/install/sfsroot $install_dir/etc/initcpio/install/sfsroot
+
+    echo "install zm to $install_dir"
 }
 
 zm_update()
 {
     zm_install_pkg http://github.com/Zeroman/zm/raw/master/PKGBUILD
+}
+
+zm_install_pkg()
+{
+    useradd build_user
+    echo "%build_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/build_user
+    mkdir -p /tmp/build
+    cd /tmp/build
+    pkgname=$1
+    if [ "${pkgname:(-8)}" = "PKGBUILD" ];then
+        wget $pkgname
+        pkgname=$(awk -F= '/pkgname=/{print $2}' PKGBUILD)
+        # pacman -Qq $pkgname > /dev/null 2>&1 && exit
+    else
+        pacman -Qq $pkgname > /dev/null 2>&1 && exit
+        wget http://aur.archlinux.org/packages/${pkgname:0:2}/${pkgname}/${pkgname}.tar.gz
+        tar xvf ${pkgname}.tar.gz
+        cd ${pkgname}
+    fi
+    chown build_user.build_user /tmp/build -R
+    su build_user -c "makepkg --noconfirm -si $2"
+    repo_dir=/work/cache/pacman/repo
+    if [ -d $repo_dir ];then
+        rm -fv $repo_dir/${pkgname}*pkg.tar.[xg]z
+        cp -fv ${pkgname}*pkg.tar.[xg]z $repo_dir/
+        rm -fv $repo_dir/custom.db.tar.gz
+        repo-add $repo_dir/custom.db.tar.gz $repo_dir/*.pkg.tar.[xg]z
+    fi
+    userdel build_user
+    rm -f /etc/sudoers.d/build_user
+    rm -rf /tmp/build
 }
 
 zm_setup_tzdata() 
@@ -1288,7 +1376,8 @@ zm_setup_default_locales()
 zm_argv_del()
 {
     if [ -n "$1" ];then
-        zm_argv=${zm_argv/"$1"}
+        # zm_argv=${zm_argv/"$1"}
+        zm_argv=$(echo " "$zm_argv" " | sed -e "s# $1 # #g" | xargs)
     fi
 }
 
@@ -1448,6 +1537,8 @@ zm_excute()
                 ;;
             --update-system|-u) shift; update_system $1; test -z "$1" || shift; 
                 ;;
+            --install) shift; install_zm $1; exit 0;
+                ;;
             --install-pkg) shift; install_pkg $1; exit 0;
                 ;;
             --update-pkg) zm_update; exit 0;
@@ -1458,7 +1549,6 @@ zm_excute()
                 ;;
             --build-deb) shift; zm_build_deb_dhmake $1; exit 0;
                 ;;
-
             --version)
                 show_version; exit 0;
                 ;;
