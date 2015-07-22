@@ -1271,10 +1271,12 @@ zm_update()
 
 zm_install_pkg()
 {
-    useradd build_user
+    pkg_build_dir=/tmp/__build_dir
+    mkdir -p $pkg_build_dir
+
+    useradd build_user || true
     echo "%build_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/build_user
-    mkdir -p /tmp/build
-    cd /tmp/build
+    cd $pkg_build_dir
     pkgname=$1
     if [ "${pkgname:(-8)}" = "PKGBUILD" ];then
         wget $pkgname
@@ -1286,7 +1288,7 @@ zm_install_pkg()
         tar xvf ${pkgname}.tar.gz
         cd ${pkgname}
     fi
-    chown build_user.build_user /tmp/build -R
+    chown build_user.build_user $pkg_build_dir -R
     su build_user -c "makepkg --noconfirm -si $2"
     repo_dir=/work/cache/pacman/repo
     if [ -d $repo_dir ];then
@@ -1297,7 +1299,7 @@ zm_install_pkg()
     fi
     userdel build_user
     rm -f /etc/sudoers.d/build_user
-    rm -rf /tmp/build
+    rm -rf $pkg_build_dir
 }
 
 zm_setup_tzdata() 
