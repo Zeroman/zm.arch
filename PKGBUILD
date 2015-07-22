@@ -20,7 +20,7 @@ source=('git://github.com/Zeroman/zm.git')
 
 package() {
     cd zm
-    ./zm --install-pkg "${pkgdir}"
+    ./zm --install "${pkgdir}"
 }
 
 sha256sums=('SKIP')
